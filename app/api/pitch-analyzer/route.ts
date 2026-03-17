@@ -1,46 +1,112 @@
 import { auth } from '@/lib/auth'
-import { orchestrate } from '@/lib/ai/orchestrator'
-import { pitchAnalyzerSystemPrompt, getPitchAnalysisPrompt } from '@/lib/ai/prompts/pitch-analyzer'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { pitchAnalyzerSystemPrompt } from '@/lib/ai/prompts/pitch-analyzer'
 
 export const maxDuration = 60
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+
+const analysisPrompt = `
+Analyze the attached pitch deck and produce two outputs:
+
+PART 1 - SCORECARD (output as JSON between triple backticks):
+\`\`\`json
+{
+  "company": "Company Name",
+  "scores": {
+    "team": { "score": 0, "comment": "" },
+    "market_size": { "score": 0, "comment": "" },
+    "product": { "score": 0, "comment": "" },
+    "traction": { "score": 0, "comment": "" },
+    "business_model": { "score": 0, "comment": "" },
+    "defensibility": { "score": 0, "comment": "" }
+  },
+  "overall": 0,
+  "verdict": "PASS | PROCEED TO DD | STRONG YES"
+}
+\`\`\`
+
+PART 2 - NARRATIVE MEMO:
+
+# Investment Analysis: [Company Name]
+
+## What They Do (Plain English)
+[1-2 sentences anyone can understand]
+
+## Why Now — Market Timing
+[What makes this the right moment]
+
+## Team Verdict
+[Honest assessment of the founders]
+
+## Product Differentiation
+[What makes this different and defensible]
+
+## Deal Concerns
+[Be direct about the red flags ⚠️]
+
+## What We'd Need to See
+[What would make us invest]
+
+## Verdict: [PASS ❌ / PROCEED TO DD 🔄 / STRONG YES ✅]
+[Final justification]
+`
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session) return new Response('Unauthorized', { status: 401 })
 
-  const formData = await req.formData()
-  const file = formData.get('file') as File
-
-  if (!file) return new Response('No file provided', { status: 400 })
-
-  const buffer = Buffer.from(await file.arrayBuffer())
-  let text = ''
-
+  let formData: FormData
   try {
-    if (file.name.endsWith('.pdf')) {
-      const pdfParseModule = await import('pdf-parse')
-      const pdfParse = (pdfParseModule as any).default || pdfParseModule
-      const parsed = await pdfParse(buffer)
-      text = parsed.text
-    } else if (file.name.endsWith('.pptx') || file.name.endsWith('.ppt')) {
-      const officeparser = await import('officeparser')
-      const parseOffice = (officeparser as any).parseOfficeAsync || (officeparser as any).parseOffice
-      text = await parseOffice(buffer)
-    } else {
-      text = buffer.toString('utf-8')
-    }
-  } catch (err) {
-    console.error('File parse error:', err)
-    return new Response('Failed to parse file', { status: 500 })
+    formData = await req.formData()
+  } catch {
+    return new Response('Failed to read upload', { status: 400 })
   }
 
-  const prompt = getPitchAnalysisPrompt(text)
-  const stream = await orchestrate(pitchAnalyzerSystemPrompt, prompt)
+  const file = formData.get('file') as File
+  if (!file) return new Response('No file provided', { status: 400 })
+
+  const fileName = file.name.toLowerCase()
+  const bytes = await file.arrayBuffer()
+  const base64 = Buffer.from(bytes).toString('base64')
+
+  let mimeType = 'application/pdf'
+  if (fileName.endsWith('.pptx')) {
+    mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  } else if (fileName.endsWith('.ppt')) {
+    mimeType = 'application/vnd.ms-powerpoint'
+  }
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        const result = await model.generateContentStream([
+          { text: `${pitchAnalyzerSystemPrompt}\n\n${analysisPrompt}` },
+          { inlineData: { mimeType, data: base64 } },
+        ])
+
+        for await (const chunk of result.stream) {
+          const text = chunk.text()
+          if (text) controller.enqueue(encoder.encode(text))
+        }
+
+        const response = await result.response
+        console.log('[Gemini pitch] Tokens:', response.usageMetadata)
+        controller.close()
+      } catch (err: any) {
+        console.error('[pitch-analyzer] Error:', err?.message)
+        controller.enqueue(
+          encoder.encode(`**Error:** ${err?.message ?? 'Analysis failed. Please try again.'}`)
+        )
+        controller.close()
+      }
+    },
+  })
 
   return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Transfer-Encoding': 'chunked',
-    },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   })
 }
