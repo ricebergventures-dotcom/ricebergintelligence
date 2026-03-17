@@ -13,7 +13,7 @@ export async function orchestrate(
   systemPrompt: string,
   userPrompt: string
 ): Promise<ReadableStream<Uint8Array>> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const encoder = new TextEncoder()
 

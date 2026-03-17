@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     mimeType = 'application/vnd.ms-powerpoint'
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream<Uint8Array>({
