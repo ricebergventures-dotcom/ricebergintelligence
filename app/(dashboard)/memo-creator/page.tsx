@@ -38,21 +38,32 @@ export default function MemoCreatorPage() {
         if (done) break
         setOutput(prev => prev + decoder.decode(value))
       }
-    } catch (err) {
+    } catch {
       setOutput('Error generating memo.')
     } finally {
       setIsStreaming(false)
     }
   }
 
+  const inputBase = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }
+  const onFocusIn = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.style.borderColor = 'rgba(97, 209, 220, 0.4)'
+  }
+  const onFocusOut = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.style.borderColor = 'rgba(255,255,255,0.07)'
+  }
+
   const Field = ({ label, field, placeholder, multiline }: { label: string; field: string; placeholder?: string; multiline?: boolean }) => (
     <div>
-      <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">{label}</label>
+      <label className="block text-xs text-gray-600 mb-1.5 uppercase tracking-wider">{label}</label>
       {multiline ? (
         <textarea
           value={formData[field] || ''}
           onChange={(e) => update(field, e.target.value)}
-          className="w-full bg-input border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none h-24"
+          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 focus:outline-none transition-all resize-none h-24"
+          style={inputBase}
+          onFocus={onFocusIn}
+          onBlur={onFocusOut}
           placeholder={placeholder}
         />
       ) : (
@@ -60,7 +71,10 @@ export default function MemoCreatorPage() {
           type="text"
           value={formData[field] || ''}
           onChange={(e) => update(field, e.target.value)}
-          className="w-full bg-input border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 focus:outline-none transition-all"
+          style={inputBase}
+          onFocus={onFocusIn}
+          onBlur={onFocusOut}
           placeholder={placeholder}
         />
       )}
@@ -82,7 +96,7 @@ export default function MemoCreatorPage() {
     </div>,
     <div key={2} className="space-y-4">
       <Field label="What They Build" field="technology" placeholder="Describe the product/technology" multiline />
-      <Field label="Key Innovation" field="innovation" placeholder="What's technically novel?" multiline />
+      <Field label="Key Innovation" field="innovation" placeholder="What is technically novel?" multiline />
       <Field label="IP / Patents" field="ip" placeholder="Any patents filed or granted?" />
     </div>,
     <div key={3} className="space-y-4">
@@ -109,7 +123,7 @@ export default function MemoCreatorPage() {
     <div key={6} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <Field label="Our Check Size" field="checkSize" placeholder="$500K" />
-        <Field label="Lead Investor" field="leadInvestor" placeholder="Who's leading?" />
+        <Field label="Lead Investor" field="leadInvestor" placeholder="Who is leading?" />
       </div>
       <Field label="Co-investors" field="coInvestors" placeholder="Other investors in the round" />
       <Field label="Use of Funds" field="useOfFunds" placeholder="How will capital be deployed?" multiline />
@@ -122,7 +136,7 @@ export default function MemoCreatorPage() {
       description="Generate a full IC-ready investment memo"
       actions={
         output ? (
-          <button onClick={() => { setOutput(''); setStep(1); setFormData({}) }} className="text-xs text-muted-foreground hover:text-foreground border border-border rounded px-3 py-1.5 transition-colors">
+          <button onClick={() => { setOutput(''); setStep(1); setFormData({}) }} className="rounded-xl py-2 px-4 text-xs text-gray-500 hover:text-white transition-colors" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
             New Memo
           </button>
         ) : undefined
@@ -130,45 +144,48 @@ export default function MemoCreatorPage() {
     >
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-2">
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            <div className="flex border-b border-border">
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
               {steps.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setStep(s.id)}
-                  className={`flex-1 py-2 text-[10px] font-medium transition-colors ${
+                  className="flex-1 py-2.5 text-[10px] font-medium transition-colors"
+                  style={
                     step === s.id
-                      ? 'bg-primary/10 text-primary border-b-2 border-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
+                      ? { background: 'rgba(97, 209, 220, 0.1)', color: '#61D1DC', borderBottom: '2px solid #61D1DC' }
+                      : { color: 'rgba(255,255,255,0.3)' }
+                  }
                 >
                   {s.id}
                 </button>
               ))}
             </div>
             <div className="p-5">
-              <h3 className="text-sm font-semibold mb-4 text-foreground">{steps[step - 1].title}</h3>
+              <h3 className="text-sm font-semibold mb-4 text-white">{steps[step - 1].title}</h3>
               {stepContent[step - 1]}
               <div className="flex items-center justify-between mt-6">
                 <button
                   onClick={() => setStep(s => Math.max(1, s - 1))}
                   disabled={step === 1}
-                  className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                  className="text-xs text-gray-600 hover:text-white disabled:opacity-30 transition-colors"
                 >
-                  ← Back
+                  Back
                 </button>
                 {step < 6 ? (
                   <button
                     onClick={() => setStep(s => Math.min(6, s + 1))}
-                    className="text-xs bg-secondary text-foreground px-4 py-2 rounded hover:bg-secondary/80 transition-colors"
+                    className="text-xs px-4 py-2 rounded-xl transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'white' }}
                   >
-                    Next →
+                    Next
                   </button>
                 ) : (
                   <button
                     onClick={handleGenerate}
                     disabled={isStreaming}
-                    className="text-sm bg-primary text-primary-foreground px-5 py-2 rounded hover:bg-primary/90 transition-colors disabled:opacity-40"
+                    className="text-sm px-5 py-2 rounded-xl font-semibold text-black transition-all disabled:opacity-40"
+                    style={{ background: 'linear-gradient(135deg, #61D1DC, #40B4C0)' }}
                   >
                     {isStreaming ? 'Generating...' : 'Generate Memo'}
                   </button>
@@ -182,9 +199,11 @@ export default function MemoCreatorPage() {
           {output ? (
             <StreamingOutput content={output} isStreaming={isStreaming} />
           ) : (
-            <div className="bg-card border border-dashed border-border rounded-lg p-12 text-center">
-              <div className="text-4xl mb-3">📝</div>
-              <div className="text-sm text-muted-foreground">Fill in the form and click Generate Memo on Step 6</div>
+            <div className="rounded-2xl p-12 text-center" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.06)' }}>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(97, 209, 220, 0.06)' }}>
+                <span className="text-xl">📝</span>
+              </div>
+              <div className="text-sm text-gray-600">Fill in the form and click Generate Memo on Step 6</div>
             </div>
           )}
         </div>

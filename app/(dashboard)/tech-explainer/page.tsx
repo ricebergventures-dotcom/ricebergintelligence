@@ -42,13 +42,15 @@ export default function TechExplainerPage() {
     }
   }
 
+  const inputBase = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }
+
   return (
     <PageShell
       title="Technology Explainer"
       description="Translate complex deep-tech into clear, audience-appropriate language"
       actions={
         output ? (
-          <button onClick={() => { setOutput(''); setTech('') }} className="text-xs text-muted-foreground hover:text-foreground border border-border rounded px-3 py-1.5 transition-colors">
+          <button onClick={() => { setOutput(''); setTech('') }} className="rounded-xl py-2 px-4 text-xs text-gray-500 hover:text-white transition-colors" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
             Clear
           </button>
         ) : undefined
@@ -56,27 +58,33 @@ export default function TechExplainerPage() {
     >
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-2 space-y-4">
-          <div className="bg-card border border-border rounded-lg p-5 space-y-5">
+          <div className="rounded-2xl p-5 space-y-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">Technology</label>
+              <label className="block text-xs text-gray-600 mb-1.5 uppercase tracking-wider">Technology</label>
               <textarea
                 value={tech}
                 onChange={(e) => setTech(e.target.value)}
-                className="w-full bg-input border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none h-32"
-                placeholder="Paste a technology description, abstract, or just a name (e.g. 'solid-state batteries', 'CRISPR base editing', 'quantum error correction')"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 focus:outline-none transition-all resize-none h-32"
+                style={inputBase}
+                onFocus={(e) => e.target.style.borderColor = 'rgba(97, 209, 220, 0.4)'}
+                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.07)'}
+                placeholder="Paste a technology description, abstract, or just a name (e.g. solid-state batteries, CRISPR base editing, quantum error correction)"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Audience</label>
+              <label className="block text-xs text-gray-600 mb-2 uppercase tracking-wider">Audience</label>
               <div className="flex flex-wrap gap-1.5">
                 {audiences.map(a => (
                   <button
                     key={a}
                     onClick={() => setAudience(a)}
-                    className={`px-3 py-1.5 text-xs rounded transition-colors ${
-                      audience === a ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'
-                    }`}
+                    className="px-3 py-1.5 text-xs rounded-xl transition-all"
+                    style={
+                      audience === a
+                        ? { background: 'rgba(97, 209, 220, 0.15)', color: '#61D1DC', border: '1px solid rgba(97, 209, 220, 0.3)' }
+                        : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.06)' }
+                    }
                   >
                     {a}
                   </button>
@@ -85,18 +93,21 @@ export default function TechExplainerPage() {
             </div>
 
             <div>
-              <label className="block text-xs text-muted-foreground mb-2 uppercase tracking-wider">Depth</label>
+              <label className="block text-xs text-gray-600 mb-2 uppercase tracking-wider">Depth</label>
               <div className="flex gap-2">
                 {depths.map(d => (
                   <button
                     key={d.label}
                     onClick={() => setDepth(d.label)}
-                    className={`flex-1 py-2 text-xs rounded text-center transition-colors ${
-                      depth === d.label ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground'
-                    }`}
+                    className="flex-1 py-2.5 text-xs rounded-xl text-center transition-all"
+                    style={
+                      depth === d.label
+                        ? { background: 'rgba(97, 209, 220, 0.15)', color: '#61D1DC', border: '1px solid rgba(97, 209, 220, 0.3)' }
+                        : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.06)' }
+                    }
                   >
-                    <div>{d.label}</div>
-                    <div className="text-[10px] opacity-70">{d.sub}</div>
+                    <div className="font-medium">{d.label}</div>
+                    <div className="text-[10px] opacity-70 mt-0.5">{d.sub}</div>
                   </button>
                 ))}
               </div>
@@ -105,7 +116,8 @@ export default function TechExplainerPage() {
             <button
               onClick={handleExplain}
               disabled={!tech || isStreaming}
-              className="w-full bg-primary text-primary-foreground font-medium py-2.5 rounded text-sm hover:bg-primary/90 transition-colors disabled:opacity-40"
+              className="w-full py-3 rounded-xl text-sm font-semibold text-black transition-all disabled:opacity-40"
+              style={{ background: 'linear-gradient(135deg, #61D1DC, #40B4C0)' }}
             >
               {isStreaming ? 'Explaining...' : 'Explain'}
             </button>
@@ -116,9 +128,11 @@ export default function TechExplainerPage() {
           {output ? (
             <StreamingOutput content={output} isStreaming={isStreaming} />
           ) : (
-            <div className="bg-card border border-dashed border-border rounded-lg p-12 text-center">
-              <div className="text-4xl mb-3">🔬</div>
-              <div className="text-sm text-muted-foreground">Paste a technology description and select your audience</div>
+            <div className="rounded-2xl p-12 text-center" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.06)' }}>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(97, 209, 220, 0.06)' }}>
+                <span className="text-xl">🔬</span>
+              </div>
+              <div className="text-sm text-gray-600">Paste a technology description and select your audience</div>
             </div>
           )}
         </div>

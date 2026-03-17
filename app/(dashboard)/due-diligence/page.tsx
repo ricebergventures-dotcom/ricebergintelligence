@@ -25,7 +25,6 @@ export default function DueDiligencePage() {
     setIsStreaming(true)
     setCurrentStep(1)
 
-    // Simulate step progression
     const stepInterval = setInterval(() => {
       setCurrentStep(prev => {
         if (prev < 4) return prev + 1
@@ -53,7 +52,7 @@ export default function DueDiligencePage() {
       }
 
       setCurrentStep(5)
-    } catch (err) {
+    } catch {
       setOutput('Error running due diligence. Please try again.')
     } finally {
       clearInterval(stepInterval)
@@ -70,13 +69,21 @@ export default function DueDiligencePage() {
     setIsStreaming(false)
   }
 
+  const inputBase = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }
+  const onFocusIn = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.style.borderColor = 'rgba(97, 209, 220, 0.4)'
+  }
+  const onFocusOut = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.style.borderColor = 'rgba(255,255,255,0.07)'
+  }
+
   return (
     <PageShell
       title="Due Diligence Operator"
       description="AI-powered company research and investment analysis"
       actions={
         output ? (
-          <button onClick={handleClear} className="text-xs text-muted-foreground hover:text-foreground border border-border rounded px-3 py-1.5 transition-colors">
+          <button onClick={handleClear} className="rounded-xl py-2 px-4 text-xs text-gray-500 hover:text-white transition-colors" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
             Clear
           </button>
         ) : undefined
@@ -84,65 +91,82 @@ export default function DueDiligencePage() {
     >
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-2 space-y-4">
-          <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+          <div className="rounded-2xl p-5 space-y-4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">Company Name *</label>
+              <label className="block text-xs text-gray-600 mb-1.5 uppercase tracking-wider">Company Name *</label>
               <input
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                className="w-full bg-input border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 focus:outline-none transition-all"
+                style={inputBase}
+                onFocus={onFocusIn}
+                onBlur={onFocusOut}
                 placeholder="e.g. EtherealX"
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">Website</label>
+              <label className="block text-xs text-gray-600 mb-1.5 uppercase tracking-wider">Website</label>
               <input
                 type="url"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
-                className="w-full bg-input border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 focus:outline-none transition-all"
+                style={inputBase}
+                onFocus={onFocusIn}
+                onBlur={onFocusOut}
                 placeholder="https://..."
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">One-liner (optional)</label>
+              <label className="block text-xs text-gray-600 mb-1.5 uppercase tracking-wider">One-liner (optional)</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-input border border-border rounded px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none h-20"
+                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-700 focus:outline-none transition-all resize-none h-20"
+                style={inputBase}
+                onFocus={onFocusIn}
+                onBlur={onFocusOut}
                 placeholder="Brief description of what they do..."
               />
             </div>
             <button
               onClick={handleRun}
               disabled={!company || isStreaming}
-              className="w-full bg-primary text-primary-foreground font-medium py-2.5 rounded text-sm hover:bg-primary/90 transition-colors disabled:opacity-40"
+              className="w-full py-3 rounded-xl text-sm font-semibold text-black transition-all disabled:opacity-40"
+              style={{ background: 'linear-gradient(135deg, #61D1DC, #40B4C0)' }}
             >
               {isStreaming ? 'Running...' : 'Run Due Diligence'}
             </button>
           </div>
 
           {currentStep > 0 && (
-            <div className="bg-card border border-border rounded-lg p-5">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Progress</div>
-              <div className="space-y-2">
-                {steps.map((step) => (
-                  <div key={step.id} className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] flex-shrink-0 ${
-                      currentStep > step.id
-                        ? 'bg-primary text-primary-foreground'
-                        : currentStep === step.id
-                        ? 'border-2 border-primary bg-primary/10'
-                        : 'border border-border bg-muted'
-                    }`}>
-                      {currentStep > step.id ? '✓' : step.id}
+            <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="text-[9px] text-gray-600 uppercase tracking-[0.2em] mb-3">Progress</div>
+              <div className="space-y-2.5">
+                {steps.map((step) => {
+                  const done = currentStep > step.id
+                  const active = currentStep === step.id
+                  return (
+                    <div key={step.id} className="flex items-center gap-3">
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 font-bold"
+                        style={
+                          done
+                            ? { background: '#61D1DC', color: '#000' }
+                            : active
+                            ? { border: '2px solid #61D1DC', color: '#61D1DC' }
+                            : { border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' }
+                        }
+                      >
+                        {done ? '✓' : step.id}
+                      </div>
+                      <span className={`text-xs ${currentStep >= step.id ? 'text-white' : 'text-gray-600'}`}>
+                        {step.label}
+                      </span>
                     </div>
-                    <span className={`text-xs ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      {step.label}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -152,9 +176,11 @@ export default function DueDiligencePage() {
           {output ? (
             <StreamingOutput content={output} isStreaming={isStreaming} />
           ) : (
-            <div className="bg-card border border-dashed border-border rounded-lg p-12 text-center">
-              <div className="text-4xl mb-3">🔍</div>
-              <div className="text-sm text-muted-foreground">Enter a company name and click Run Due Diligence to generate a report</div>
+            <div className="rounded-2xl p-12 text-center" style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.06)' }}>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(97, 209, 220, 0.06)' }}>
+                <span className="text-xl">🔍</span>
+              </div>
+              <div className="text-sm text-gray-600">Enter a company name and click Run Due Diligence to generate a report</div>
             </div>
           )}
         </div>
