@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { pitchAnalyzerSystemPrompt } from '@/lib/ai/prompts/pitch-analyzer'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -52,6 +52,68 @@ PART 2 - NARRATIVE MEMO:
 [Final justification]
 `
 
+async function uploadToGeminiFileApi(
+  buffer: Buffer,
+  mimeType: string,
+  displayName: string
+): Promise<{ uri: string; name: string }> {
+  const apiKey = process.env.GEMINI_API_KEY!
+  const boundary = 'gemini_upload_boundary'
+  const metadataJson = JSON.stringify({ file: { display_name: displayName } })
+
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadataJson}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`
+    ),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--`),
+  ])
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?uploadType=multipart&key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+        'Content-Length': body.length.toString(),
+      },
+      body,
+    }
+  )
+
+  if (!res.ok) {
+    const txt = await res.text()
+    throw new Error(`File upload failed (${res.status}): ${txt}`)
+  }
+
+  const data = await res.json()
+  let state: string = data.file?.state ?? 'ACTIVE'
+  const fileGoogleName: string = data.file?.name ?? ''
+
+  let polls = 0
+  while (state === 'PROCESSING' && polls < 10) {
+    await new Promise(r => setTimeout(r, 2000))
+    const statusRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${fileGoogleName}?key=${apiKey}`
+    )
+    const statusData = await statusRes.json()
+    state = statusData.state ?? 'ACTIVE'
+    polls++
+  }
+
+  if (state === 'FAILED') throw new Error('Gemini file processing failed')
+  return { uri: data.file.uri, name: fileGoogleName }
+}
+
+async function deleteGeminiFile(fileName: string) {
+  try {
+    await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${process.env.GEMINI_API_KEY}`,
+      { method: 'DELETE' }
+    )
+  } catch { /* non-critical */ }
+}
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session) return new Response('Unauthorized', { status: 401 })
@@ -59,8 +121,8 @@ export async function POST(req: Request) {
   let formData: FormData
   try {
     formData = await req.formData()
-  } catch {
-    return new Response('Failed to read upload', { status: 400 })
+  } catch (e: any) {
+    return new Response(`Upload error: ${e?.message ?? 'unknown'}`, { status: 400 })
   }
 
   const file = formData.get('file') as File
@@ -68,29 +130,57 @@ export async function POST(req: Request) {
 
   const fileName = file.name.toLowerCase()
   const bytes = await file.arrayBuffer()
-  const base64 = Buffer.from(bytes).toString('base64')
-
-  let mimeType = 'application/pdf'
-  if (fileName.endsWith('.pptx')) {
-    mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-  } else if (fileName.endsWith('.ppt')) {
-    mimeType = 'application/vnd.ms-powerpoint'
-  }
+  const buffer = Buffer.from(bytes)
 
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      let uploadedFileName: string | null = null
+      const emit = (text: string) => controller.enqueue(encoder.encode(text))
+
       try {
-        const result = await model.generateContentStream([
-          { text: `${pitchAnalyzerSystemPrompt}\n\n${analysisPrompt}` },
-          { inlineData: { mimeType, data: base64 } },
-        ])
+        let contentParts: any[]
+
+        if (fileName.endsWith('.pdf')) {
+          // Gemini File API: handles any file size, bypasses inline data limits
+          const uploaded = await uploadToGeminiFileApi(buffer, 'application/pdf', file.name)
+          uploadedFileName = uploaded.name
+          contentParts = [
+            { text: `${pitchAnalyzerSystemPrompt}\n\n${analysisPrompt}` },
+            { fileData: { mimeType: 'application/pdf', fileUri: uploaded.uri } },
+          ]
+        } else if (fileName.endsWith('.pptx') || fileName.endsWith('.ppt')) {
+          // PPTX: extract text (Gemini File API doesn't support PPTX)
+          const officeparser = await import('officeparser')
+          const mod = officeparser as any
+          let text = ''
+          if (typeof mod.parseOfficeAsync === 'function') {
+            text = await mod.parseOfficeAsync(buffer)
+          } else {
+            text = await new Promise((resolve, reject) => {
+              mod.parseOffice(buffer, (data: string, err: Error) => {
+                if (err) reject(err)
+                else resolve(data)
+              })
+            })
+          }
+          if (!text?.trim()) throw new Error('Could not extract text from PPTX')
+          contentParts = [
+            { text: `${pitchAnalyzerSystemPrompt}\n\n${analysisPrompt}\n\nPITCH DECK CONTENT:\n${text.slice(0, 80000)}` },
+          ]
+        } else {
+          contentParts = [
+            { text: `${pitchAnalyzerSystemPrompt}\n\n${analysisPrompt}\n\nCONTENT:\n${buffer.toString('utf-8').slice(0, 80000)}` },
+          ]
+        }
+
+        const result = await model.generateContentStream(contentParts)
 
         for await (const chunk of result.stream) {
           const text = chunk.text()
-          if (text) controller.enqueue(encoder.encode(text))
+          if (text) emit(text)
         }
 
         const response = await result.response
@@ -98,10 +188,10 @@ export async function POST(req: Request) {
         controller.close()
       } catch (err: any) {
         console.error('[pitch-analyzer] Error:', err?.message)
-        controller.enqueue(
-          encoder.encode(`**Error:** ${err?.message ?? 'Analysis failed. Please try again.'}`)
-        )
+        emit(`\n\n**Analysis failed:** ${err?.message ?? 'Unknown error. Please try again.'}`)
         controller.close()
+      } finally {
+        if (uploadedFileName) deleteGeminiFile(uploadedFileName)
       }
     },
   })
