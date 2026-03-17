@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  Home, Search, BarChart2, FileText, Microscope, Linkedin, Briefcase, LogOut, Zap
+  Home, Search, BarChart2, FileText, Microscope, Linkedin, Briefcase, LogOut, Zap, Shield
 } from 'lucide-react'
 
 const navItems = [
@@ -14,11 +14,13 @@ const navItems = [
   { href: '/tech-explainer', label: 'Tech Explainer', icon: Microscope },
   { href: '/linkedin', label: 'LinkedIn', icon: Linkedin },
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
+  { href: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const visibleItems = navItems.filter(item => !item.adminOnly || (session?.user as any)?.role === 'admin')
 
   return (
     <aside className="w-64 h-screen flex flex-col fixed left-0 top-0 z-20" style={{ background: 'linear-gradient(180deg, #060606 0%, #080810 100%)', borderRight: '1px solid rgba(97, 209, 220, 0.08)' }}>
@@ -40,7 +42,7 @@ export function Sidebar() {
         <div className="px-3 mb-3">
           <span className="text-[9px] tracking-[0.2em] font-medium" style={{ color: 'rgba(255,255,255,0.25)' }}>TOOLS</span>
         </div>
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {visibleItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href
           return (
             <Link
