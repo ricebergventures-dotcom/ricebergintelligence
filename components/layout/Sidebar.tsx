@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  Home, Search, BarChart2, FileText, Microscope, Linkedin, Briefcase, LogOut, Zap, Shield
+  Home, Search, BarChart2, FileText, Microscope, Linkedin, Briefcase, LogOut, Shield
 } from 'lucide-react'
 
 const navItems = [
@@ -27,13 +27,8 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-6 py-7 border-b" style={{ borderColor: 'rgba(97, 209, 220, 0.08)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #61D1DC, #40B4C0)' }}>
-            <Zap size={16} className="text-black" fill="black" />
-          </div>
-          <div>
-            <div className="text-sm font-bold tracking-[0.15em] text-white leading-none">RICEBERG</div>
-            <div className="text-[9px] tracking-[0.25em] mt-0.5" style={{ color: '#61D1DC' }}>INTELLIGENCE</div>
-          </div>
+          <img src="/riceberg-logo.png" alt="Riceberg" className="h-7 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          <div className="text-[9px] tracking-[0.25em] font-semibold" style={{ color: '#61D1DC' }}>INTELLIGENCE</div>
         </div>
       </div>
 

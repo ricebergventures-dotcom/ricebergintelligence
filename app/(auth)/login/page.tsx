@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Zap, X, ArrowRight, Check } from 'lucide-react'
+import { X, ArrowRight, Check } from 'lucide-react'
 
 type View = 'login' | 'request'
 
@@ -79,17 +79,9 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm px-6">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-3 mb-5">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #61D1DC, #40B4C0)' }}
-            >
-              <Zap size={18} className="text-black" fill="black" />
-            </div>
-            <div className="text-left">
-              <div className="text-base font-bold tracking-[0.2em] text-white leading-none">RICEBERG</div>
-              <div className="text-[9px] tracking-[0.3em] mt-0.5" style={{ color: '#61D1DC' }}>INTELLIGENCE</div>
-            </div>
+          <div className="flex flex-col items-center gap-2 mb-5">
+            <img src="/riceberg-logo.png" alt="Riceberg" className="h-10 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            <div className="text-[10px] tracking-[0.3em] font-semibold" style={{ color: '#61D1DC' }}>INTELLIGENCE</div>
           </div>
           <p className="text-xs text-gray-600">AI Command Center · Riceberg Ventures</p>
         </div>
